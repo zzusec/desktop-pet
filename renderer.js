@@ -168,6 +168,9 @@ let lion = {
   // 视线(瞳孔偏移,-1..1)
   gazeX: 0,
   gazeY: 0,
+  // 头部朝注视目标的轻微偏转(比眼睛慢,营造「转头看你」)
+  headTurnX: 0,
+  headTurnY: 0,
 
   // 表情(平滑过渡的当前值)
   mouthCurve: 0.5, // -1 撇嘴 .. 1 大笑
@@ -1488,6 +1491,9 @@ function updatePet(dt, isFirst) {
   }
   lion.gazeX += (tgx - lion.gazeX) * Math.min(1, dt * 8)
   lion.gazeY += (tgy - lion.gazeY) * Math.min(1, dt * 8)
+  // 头部跟随比眼睛慢半拍(先动眼,再转头),更像真的在「看过来」
+  lion.headTurnX += (tgx - lion.headTurnX) * Math.min(1, dt * 4)
+  lion.headTurnY += (tgy - lion.headTurnY) * Math.min(1, dt * 4)
 
   // ---- 全局逻辑只在第一只时跑一次:鼠标速度衰减 + 时段问候 ----
   if (isFirst) {
@@ -2245,6 +2251,12 @@ function drawPet() {
   if (lion.state === 'angry') shakeX = Math.sin(lion.stateTime * 38) * 2.5
   if (lion.state === 'stomp') bob += -Math.abs(Math.sin(lion.stateTime * 8)) * 6
 
+  // 待机也保持细微生命感:呼吸起伏 + 极缓的重心摇摆,绝不僵直
+  if (lion.state === 'idle') {
+    bob += Math.sin(lion.breathe * 0.7) * 0.8
+    danceTilt += Math.sin(lion.manePhase * 0.6) * 0.012
+  }
+
   // ---- 拟真小动作的身体姿态 ----
   if (lion.state === 'stretch') {
     // 伸懒腰:身体拔高拉长再回落
@@ -2512,7 +2524,8 @@ function drawHead(breath) {
   const tilt = lion.headTilt // 平滑过渡的头部倾斜(歪头思考 / 睡觉低头 / 打哈欠仰头)
 
   ctx.save()
-  ctx.translate(0, cy)
+  // 头朝注视方向轻倾(横向同瞳孔一样按 facing 折算;幅度很小,只为「看过来」的神态)
+  ctx.translate(lion.headTurnX * lion.facing * 5, cy + lion.headTurnY * 3)
   ctx.rotate(tilt)
 
   // --- 头顶特征(狮子鬃毛+圆耳 / 猫尖耳 / 狗垂耳)---
