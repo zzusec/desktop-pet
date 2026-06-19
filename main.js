@@ -127,6 +127,7 @@ ipcMain.on('show-menu', () => {
       ],
     },
     { label: '📊  状态面板(心情/饱/亲密)', click: () => win && win.webContents.send('menu-action', 'stats') },
+    { label: '🙈  忙碌时让到一边(开/关)', click: () => win && win.webContents.send('menu-action', 'avoid') },
     { label: '🐾  换个动物(狮/猫/狗/兔/熊猫)', click: () => win && win.webContents.send('menu-action', 'species') },
     { label: '➕  再养一只', click: () => win && win.webContents.send('menu-action', 'addpet') },
     { label: '➖  赶走一只', click: () => win && win.webContents.send('menu-action', 'removepet') },

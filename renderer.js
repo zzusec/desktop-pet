@@ -685,6 +685,7 @@ function saveState() {
         sound: pets[0] ? pets[0].sound : false,
         fx: fxType,
         stats: showStats,
+        avoid: avoidMode,
         t: Date.now(),
       })
     )
@@ -701,6 +702,7 @@ function loadState() {
   if (!s) return
   if (s.fx) fxType = s.fx
   if (typeof s.stats === 'boolean') showStats = s.stats
+  if (typeof s.avoid === 'boolean') avoidMode = s.avoid
   const offlineMin = s.t ? (Date.now() - s.t) / 60000 : 0
   // 恢复所有宠物(兼容旧版单只存档:s.x/s.species)
   const list = Array.isArray(s.pets) ? s.pets : s.x != null ? [{ x: s.x, mood: s.mood, hunger: s.hunger, accessory: s.accessory, hat: s.hat, species: s.species }] : null
@@ -1014,6 +1016,13 @@ function toggleStats() {
   saveState()
 }
 
+// 忙碌避让开关:你操作时它是否主动让到屏幕边
+function toggleAvoid() {
+  avoidMode = !avoidMode
+  say(avoidMode ? '好~你忙的时候我躲一边 🙈' : '那我就在这儿陪你啦~', 2)
+  saveState()
+}
+
 // 番茄钟专注:开启后宠物安静陪伴(不乱跑、不闹腾、不喊饿),头顶走倒计时;
 // 到点欢呼提醒你休息。可在右键菜单选时长(默认 25 分钟),专注中再点可提前结束。
 function startFocus(min) {
@@ -1239,6 +1248,7 @@ let focusDurMin = 25 // 一个番茄钟时长(分钟)
 let careTimer = 40 * 60 // 久坐 / 喝水 / 护眼提醒倒计时(秒)
 let careIdx = 0 // 关怀提醒轮换索引
 let showStats = false // 是否显示状态面板(心情 / 饱腹 / 亲密)
+let avoidMode = true // 忙碌避让:鼠标在它附近活动时,主动让到屏幕边不挡路
 
 // 命中检测:鼠标是否落在小狮子身上(用一个椭圆包围盒)
 function hitTest(mx, my) {
@@ -1397,6 +1407,7 @@ if (hasNative) {
     else if (action === 'fx') cycleFx()
     else if (action.slice(0, 3) === 'fx:') setFxType(action.slice(3))
     else if (action === 'stats') toggleStats()
+    else if (action === 'avoid') toggleAvoid()
     else if (action === 'species') cycleSpecies()
     else if (action === 'focus') toggleFocus()
     else if (action.slice(0, 6) === 'focus:') startFocus(parseInt(action.slice(6), 10))
@@ -1525,9 +1536,22 @@ function updatePet(dt, isFirst) {
   // ---- 鼠标场景反应:受惊 / 好奇追 / 打招呼 / 把睡着的它唤醒 ----
   const distToMouse = Math.hypot(mouseX - lion.x, mouseY - (lion.y - 60 * lion.size))
   const overBody = mouseX > -9000 && distToMouse < 60 * lion.size
+
+  // 忙碌避让:开启时,鼠标在它附近移动(你在操作 / 浏览)→ 主动走到离光标较远的那侧屏幕边让开
+  let avoiding = false
+  if (
+    avoidMode && !dragging && !focusActive && lion.onGround && mouseX > -9000 &&
+    (lion.state === 'idle' || lion.state === 'walk') &&
+    now - lastMouseMoveT < 1.5 && Math.abs(mouseX - lion.x) < 180
+  ) {
+    avoiding = true
+    const edge = mouseX >= lion.x ? 70 : W - 70 // 光标在右→躲左边;在左→躲右边
+    if (Math.abs(lion.x - edge) > 40) startWalk(edge)
+  }
+
   if (lion.state === 'sleep' && overBody && mouseSpeed > 250) {
     wake() // 睡觉时鼠标在身边晃 → 醒来
-  } else if (!dragging && !focusActive && lion.onGround && mouseX > -9000) {
+  } else if (!avoiding && !dragging && !focusActive && lion.onGround && mouseX > -9000) {
     if (overBody && mouseSpeed > 1100 && now > startleCdT) {
       getStartled() // 鼠标猛地划过身上 → 受惊一跳
     } else if (lion.state === 'idle' && mouseSpeed > 900 && distToMouse < 320 && now > chaseCdT) {
@@ -3741,6 +3765,7 @@ window.__pet = {
   sound: toggleSound,
   fx: cycleFx,
   stats: toggleStats,
+  avoid: toggleAvoid,
   species: cycleSpecies,
   focus: toggleFocus,
   addpet: addPet,
