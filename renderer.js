@@ -354,10 +354,19 @@ function playStateSfx(s) {
 /* =========================================================
  * 2.6 氛围特效(雪 / 落叶 / 星空 / 花瓣,零素材)
  * =======================================================*/
-let fxType = 'none' // none | snow | leaf | star | petal
+let fxType = 'none' // none | snow | rain | leaf | petal | star | firefly
 let particles = []
-const FX_ORDER = ['none', 'snow', 'leaf', 'star', 'petal']
-const FX_NAME = { none: '关闭特效', snow: '下雪 ❄️', leaf: '落叶 🍂', star: '星空 ✨', petal: '花瓣 🌸' }
+const FX_ORDER = ['none', 'snow', 'rain', 'leaf', 'petal', 'star', 'firefly']
+const FX_NAME = { none: '关闭特效', snow: '下雪 ❄️', rain: '下雨 🌧️', leaf: '落叶 🍂', petal: '花瓣 🌸', star: '星空 ✨', firefly: '萤火虫 ✨' }
+// 每种特效的生成速率与上限
+const FX_SPAWN = {
+  snow: { rate: 28, max: 75 },
+  rain: { rate: 60, max: 130 },
+  leaf: { rate: 28, max: 75 },
+  petal: { rate: 28, max: 75 },
+  star: { rate: 6, max: 42 },
+  firefly: { rate: 4, max: 26 },
+}
 
 // 按季节 / 时间自动选默认特效
 function autoFx() {
@@ -366,6 +375,7 @@ function autoFx() {
   const h = d.getHours()
   // 冬季原本自动下雪,已按要求关闭「自动下雪」(仍可右键「✨ 氛围特效 → 下雪」手动开启)
   if (m >= 8 && m <= 10) return 'leaf' // 秋(9-11 月)
+  if (m >= 5 && m <= 7 && (h >= 21 || h < 5)) return 'firefly' // 夏夜萤火虫
   if (h >= 22 || h < 6) return 'star' // 夜晚
   if (m >= 2 && m <= 4) return 'petal' // 春(3-5 月)
   return 'none'
@@ -389,6 +399,12 @@ function spawnParticle() {
   if (fxType === 'star') {
     return { kind: 'star', x: rand(0, W), y: rand(0, H * 0.7), size: rand(1.5, 3.5), life: 0, sway: rand(2.5, 5) }
   }
+  if (fxType === 'firefly') {
+    return { kind: 'firefly', x: rand(20, W - 20), y: rand(H * 0.2, H * 0.85), vx: rand(-10, 10), vy: rand(-8, 8), size: rand(1.8, 3), life: 0, ttl: rand(5, 9), pulse: rand(2, 3.5), wanderT: rand(0, 6) }
+  }
+  if (fxType === 'rain') {
+    return { kind: 'rain', x: rand(-20, W), y: -12, vx: rand(8, 22), vy: rand(430, 560), len: rand(9, 16), life: 0 }
+  }
   const big = fxType === 'leaf' || fxType === 'petal'
   return {
     kind: fxType,
@@ -405,14 +421,15 @@ function spawnParticle() {
 }
 
 function updateFx(dt) {
-  if (fxType !== 'none') {
-    const maxN = fxType === 'star' ? 42 : 75
-    let spawn = (fxType === 'star' ? 6 : 28) * dt
-    while (spawn > 0 && particles.length < maxN) {
+  const cfg = FX_SPAWN[fxType]
+  if (cfg) {
+    let spawn = cfg.rate * dt
+    while (spawn > 0 && particles.length < cfg.max) {
       if (Math.random() < spawn) particles.push(spawnParticle())
       spawn -= 1
     }
   }
+  const wind = Math.sin(now * 0.25) * 16 + Math.sin(now * 0.07) * 10 // 缓慢起伏的风
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]
     p.life += dt
@@ -420,9 +437,19 @@ function updateFx(dt) {
       if (p.life > 6) particles.splice(i, 1)
       continue
     }
-    p.x += (p.vx + Math.sin(p.life * p.sway) * 12) * dt
+    if (p.kind === 'firefly') {
+      // 萤火虫:缓慢游荡 + 到寿命淡出
+      p.x = clamp(p.x + p.vx * dt + Math.sin((p.life + p.wanderT) * 0.9) * 8 * dt, 10, W - 10)
+      p.y = clamp(p.y + p.vy * dt + Math.cos((p.life + p.wanderT) * 0.7) * 6 * dt, H * 0.15, H - 14)
+      if (p.life > p.ttl) particles.splice(i, 1)
+      continue
+    }
+    // 飘落类(snow / rain / leaf / petal):受风影响,雨受风较小
+    const gust = p.kind === 'rain' ? wind * 0.4 : wind
+    const swayTerm = p.sway ? Math.sin(p.life * p.sway) * 12 : 0
+    p.x += (p.vx + gust + swayTerm) * dt
     p.y += p.vy * dt
-    p.rot += p.vr * dt
+    if (p.vr) p.rot += p.vr * dt
     if (p.y > H + 16) particles.splice(i, 1)
   }
 }
@@ -452,6 +479,41 @@ function drawFx() {
       ctx.fillStyle = '#FFF3B0'
       ctx.translate(p.x, p.y)
       drawSparkle(p.size)
+      ctx.restore()
+      continue
+    }
+    if (p.kind === 'firefly') {
+      const tw = 0.3 + 0.7 * Math.abs(Math.sin(p.life * p.pulse))
+      const fade = clamp(p.life, 0, 1) * clamp(p.ttl - p.life, 0, 1)
+      ctx.save()
+      ctx.translate(p.x, p.y)
+      ctx.globalAlpha = tw * fade
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size * 4)
+      g.addColorStop(0, 'rgba(214,255,140,0.9)')
+      g.addColorStop(1, 'rgba(180,230,90,0)')
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(0, 0, p.size * 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = fade
+      ctx.fillStyle = '#FBFFC0'
+      ctx.beginPath()
+      ctx.arc(0, 0, p.size, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+      continue
+    }
+    if (p.kind === 'rain') {
+      const n = Math.hypot(p.vx, p.vy) || 1
+      ctx.save()
+      ctx.globalAlpha = 0.55
+      ctx.strokeStyle = 'rgba(170,200,235,0.8)'
+      ctx.lineWidth = 1.5
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      ctx.lineTo(p.x - (p.vx / n) * p.len, p.y - (p.vy / n) * p.len)
+      ctx.stroke()
       ctx.restore()
       continue
     }

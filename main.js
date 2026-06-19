@@ -119,9 +119,11 @@ ipcMain.on('show-menu', () => {
       submenu: [
         { label: '关闭', type: 'radio', checked: currentFx === 'none', click: () => win && win.webContents.send('menu-action', 'fx:none') },
         { label: '下雪 ❄️', type: 'radio', checked: currentFx === 'snow', click: () => win && win.webContents.send('menu-action', 'fx:snow') },
+        { label: '下雨 🌧️', type: 'radio', checked: currentFx === 'rain', click: () => win && win.webContents.send('menu-action', 'fx:rain') },
         { label: '落叶 🍂', type: 'radio', checked: currentFx === 'leaf', click: () => win && win.webContents.send('menu-action', 'fx:leaf') },
-        { label: '星空 ✨', type: 'radio', checked: currentFx === 'star', click: () => win && win.webContents.send('menu-action', 'fx:star') },
         { label: '花瓣 🌸', type: 'radio', checked: currentFx === 'petal', click: () => win && win.webContents.send('menu-action', 'fx:petal') },
+        { label: '星空 ✨', type: 'radio', checked: currentFx === 'star', click: () => win && win.webContents.send('menu-action', 'fx:star') },
+        { label: '萤火虫 ✨', type: 'radio', checked: currentFx === 'firefly', click: () => win && win.webContents.send('menu-action', 'fx:firefly') },
       ],
     },
     { label: '📊  状态面板(心情/饱/亲密)', click: () => win && win.webContents.send('menu-action', 'stats') },
