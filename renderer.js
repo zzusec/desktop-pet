@@ -90,10 +90,11 @@ const COLOR = {
 // 各物种的配色覆盖:狮/猫/狗沿用 COLOR 暖色;兔=白绒,熊猫=黑白
 const SPECIES_SKIN = {
   rabbit: {
-    body1: '#FFFFFF', body2: '#ECECF2',
-    face1: '#FFFFFF', face2: '#E7E7EF',
-    limb: '#F1F1F7', ear: '#F4F4F9', earInner: '#F7A9C0',
+    body1: '#FFFFFF', body2: '#EDEFF4',
+    face1: '#FFFFFF', face2: '#E9ECF3',
+    limb: '#F4F5F9', ear: '#F7F7FB', earInner: '#FBB6C8',
     maneOuter: '#FFFFFF',
+    line: 'rgba(176,158,150,0.6)', lineW: 2, // 柔和细描边,告别厚棕线,更像毛绒
   },
   panda: {
     body1: '#FFFFFF', body2: '#E9E9E9',
@@ -105,6 +106,15 @@ const SPECIES_SKIN = {
 // 取当前宠物的配色(无覆盖则用默认 COLOR)
 function skin() {
   return SPECIES_SKIN[lion.species] || COLOR
+}
+// 当前宠物的描边颜色 / 宽度(兔子用柔和细线;其余沿用棕色粗线)
+function lineCol() {
+  const s = SPECIES_SKIN[lion.species]
+  return (s && s.line) || COLOR.line
+}
+function lineW(base) {
+  const s = SPECIES_SKIN[lion.species]
+  return s && s.lineW ? s.lineW : base
 }
 
 // 小狮子的「标准尺寸」(逻辑像素),整体随 lion.size 缩放
@@ -2407,8 +2417,8 @@ function drawBody(breath) {
   g.addColorStop(0, skin().body1)
   g.addColorStop(1, skin().body2)
   ctx.fillStyle = g
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 3
+  ctx.strokeStyle = lineCol()
+  ctx.lineWidth = lineW(3)
   roundedBlob(0, cy, w, h, 22)
   ctx.fill()
   ctx.stroke()
@@ -2417,6 +2427,13 @@ function drawBody(breath) {
   ctx.beginPath()
   ctx.ellipse(0, cy + 6, w * 0.28, h * 0.34, 0, 0, Math.PI * 2)
   ctx.fill()
+  if (lion.species === 'rabbit') {
+    // 头部接触阴影:让大头「坐」在身上,出立体感
+    ctx.fillStyle = 'rgba(150,160,185,0.16)'
+    ctx.beginPath()
+    ctx.ellipse(0, cy - h / 2 + 7, w * 0.34, 7, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
 }
 
 // 腿 / 脚
@@ -2433,8 +2450,8 @@ function drawLegs() {
     liftL = Math.max(0, -p) * 22
   }
   ctx.fillStyle = skin().limb
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 3
+  ctx.strokeStyle = lineCol()
+  ctx.lineWidth = lineW(3)
   if (lion.state === 'scratch') {
     // 挠痒:后侧腿站稳,前侧后腿高高抬起朝耳朵快速挠
     ctx.beginPath()
@@ -2509,8 +2526,8 @@ function drawArm(side) {
   ctx.rotate(angle)
 
   ctx.fillStyle = skin().limb
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 3
+  ctx.strokeStyle = lineCol()
+  ctx.lineWidth = lineW(3)
   // 胳膊(胶囊)
   roundedBlob(0, 16, 12, 30, 6)
   ctx.fill()
@@ -2533,8 +2550,8 @@ function drawTail(breath) {
     const tx = baseX + 2
     const ty = baseY + 2
     ctx.fillStyle = skin().maneOuter
-    ctx.strokeStyle = COLOR.line
-    ctx.lineWidth = 2.5
+    ctx.strokeStyle = lineCol()
+    ctx.lineWidth = lineW(2.5)
     ctx.beginPath()
     ctx.arc(tx, ty, 8, 0, Math.PI * 2)
     ctx.fill()
@@ -2587,6 +2604,7 @@ function drawHead(breath) {
   // 头朝注视方向轻倾(横向同瞳孔一样按 facing 折算;幅度很小,只为「看过来」的神态)
   ctx.translate(lion.headTurnX * lion.facing * 5, cy + lion.headTurnY * 3)
   ctx.rotate(tilt)
+  if (lion.species === 'rabbit') ctx.scale(1.14, 1.14) // 兔子大头比例,更萌
 
   // --- 头顶特征(狮子鬃毛+圆耳 / 猫尖耳 / 狗垂耳)---
   if (lion.species === 'cat') {
@@ -2602,13 +2620,26 @@ function drawHead(breath) {
     drawRoundEars()
   }
 
+  // 兔子:脸颊两侧蓬松绒毛(画在脸之前,只露外缘当软软的腮)
+  if (lion.species === 'rabbit') {
+    ctx.fillStyle = skin().face2
+    ctx.strokeStyle = lineCol()
+    ctx.lineWidth = lineW(2)
+    for (const side of [-1, 1]) {
+      ctx.beginPath()
+      ctx.arc(side * 33, 21, 11, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    }
+  }
+
   // --- 脸 ---
   const fg = ctx.createRadialGradient(-8, -10, 6, 0, 0, S.faceR + 8)
   fg.addColorStop(0, skin().face1)
   fg.addColorStop(1, skin().face2)
   ctx.fillStyle = fg
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 3
+  ctx.strokeStyle = lineCol()
+  ctx.lineWidth = lineW(3)
   ctx.beginPath()
   ctx.arc(0, 0, S.faceR, 0, Math.PI * 2)
   ctx.fill()
@@ -2751,8 +2782,8 @@ function drawDogEars() {
 // 兔:头顶两只立着的长耳
 function drawRabbitEars() {
   const C = skin()
-  ctx.strokeStyle = COLOR.line
-  ctx.lineWidth = 3
+  ctx.strokeStyle = lineCol()
+  ctx.lineWidth = lineW(3)
   ctx.lineJoin = 'round'
   for (const side of [-1, 1]) {
     ctx.save()
