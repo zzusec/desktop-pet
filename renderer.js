@@ -94,7 +94,7 @@ const SPECIES_SKIN = {
     face1: '#FFFFFF', face2: '#E9ECF3',
     limb: '#F4F5F9', ear: '#F7F7FB', earInner: '#FBB6C8',
     maneOuter: '#FFFFFF',
-    line: 'rgba(176,158,150,0.6)', lineW: 2, // 柔和细描边,告别厚棕线,更像毛绒
+    line: 'rgba(180,172,168,0.4)', lineW: 1.5, // 柔和细描边,告别厚棕线,更像毛绒
   },
   panda: {
     body1: '#FFFFFF', body2: '#E9E9E9',
@@ -115,6 +115,34 @@ function lineCol() {
 function lineW(base) {
   const s = SPECIES_SKIN[lion.species]
   return s && s.lineW ? s.lineW : base
+}
+
+// 绒毛边缘:沿轮廓画一圈外凸的小毛簇(小圆点,外凸量随机)→ 柔软云朵状毛绒边。确定性,不逐帧随机。
+function drawFurRim(cx, cy, rx, ry, n, len, col) {
+  ctx.save()
+  ctx.fillStyle = col
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2
+    const seed = Math.abs(Math.sin(i * 12.9898 + 4.1)) // 0..1 稳定伪随机
+    const out = len * (0.35 + 0.65 * seed) // 外凸量
+    const r = 2.6 + seed * 1.8 // 毛簇半径
+    ctx.beginPath()
+    ctx.arc(cx + Math.cos(a) * (rx + out - r * 0.5), cy + Math.sin(a) * (ry + out - r * 0.5), r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
+// 体积柔光:上亮下暗,让白球有立体感(调用方需先 clip 到形状内)
+function drawPlushShade(cx, cy, r) {
+  const g = ctx.createRadialGradient(cx, cy - r * 0.45, r * 0.2, cx, cy + r * 0.35, r * 1.15)
+  g.addColorStop(0, 'rgba(255,255,255,0)')
+  g.addColorStop(0.68, 'rgba(150,160,185,0)')
+  g.addColorStop(1, 'rgba(148,158,184,0.24)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2)
+  ctx.fill()
 }
 
 // 小狮子的「标准尺寸」(逻辑像素),整体随 lion.size 缩放
@@ -2413,6 +2441,7 @@ function drawBody(breath) {
   const w = S.bodyW
   const h = S.bodyH + breath
   const cy = -S.legH - h / 2
+  if (lion.species === 'rabbit') drawFurRim(0, cy, w / 2, h / 2, 84, 5, '#DCDFE8') // 身体毛绒边缘
   const g = ctx.createLinearGradient(0, cy - h / 2, 0, cy + h / 2)
   g.addColorStop(0, skin().body1)
   g.addColorStop(1, skin().body2)
@@ -2422,6 +2451,13 @@ function drawBody(breath) {
   roundedBlob(0, cy, w, h, 22)
   ctx.fill()
   ctx.stroke()
+  if (lion.species === 'rabbit') {
+    ctx.save()
+    roundedBlob(0, cy, w, h, 22)
+    ctx.clip()
+    drawPlushShade(0, cy, h / 2)
+    ctx.restore()
+  }
   // 浅色肚皮(兔子用更白的肚皮,不偏黄)
   ctx.fillStyle = lion.species === 'rabbit' ? 'rgba(255,255,255,0.65)' : 'rgba(255,248,225,0.65)'
   ctx.beginPath()
@@ -2620,18 +2656,8 @@ function drawHead(breath) {
     drawRoundEars()
   }
 
-  // 兔子:脸颊两侧蓬松绒毛(画在脸之前,只露外缘当软软的腮)
-  if (lion.species === 'rabbit') {
-    ctx.fillStyle = skin().face2
-    ctx.strokeStyle = lineCol()
-    ctx.lineWidth = lineW(2)
-    for (const side of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(side * 33, 21, 11, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
-    }
-  }
+  // 兔子:脸部一圈蓬松毛尖(画在脸之前,只露毛尖,形成毛绒边缘)
+  if (lion.species === 'rabbit') drawFurRim(0, 0, S.faceR, S.faceR, 84, 5, '#DCDFE8')
 
   // --- 脸 ---
   const fg = ctx.createRadialGradient(-8, -10, 6, 0, 0, S.faceR + 8)
@@ -2644,6 +2670,14 @@ function drawHead(breath) {
   ctx.arc(0, 0, S.faceR, 0, Math.PI * 2)
   ctx.fill()
   ctx.stroke()
+  if (lion.species === 'rabbit') {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(0, 0, S.faceR, 0, Math.PI * 2)
+    ctx.clip()
+    drawPlushShade(0, 0, S.faceR)
+    ctx.restore()
+  }
 
   // --- 生气时鼓起的腮帮 ---
   if (lion.state === 'angry') {
