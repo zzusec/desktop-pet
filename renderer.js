@@ -2585,11 +2585,12 @@ function drawHead(breath) {
     }
   }
 
-  // --- 腮红 ---
-  ctx.fillStyle = COLOR.blush
+  // --- 腮红(兔子更大更粉,软萌一些)---
+  const rabbitFace = lion.species === 'rabbit'
+  ctx.fillStyle = rabbitFace ? 'rgba(255,150,172,0.55)' : COLOR.blush
   for (const side of [-1, 1]) {
     ctx.beginPath()
-    ctx.ellipse(side * 24, 12, 8, 5.5, 0, 0, Math.PI * 2)
+    ctx.ellipse(side * 24, 12, rabbitFace ? 9.5 : 8, rabbitFace ? 6.5 : 5.5, 0, 0, Math.PI * 2)
     ctx.fill()
   }
 
@@ -2842,14 +2843,24 @@ function drawEyes() {
 }
 
 function drawNoseMouth() {
-  // 鼻子
-  ctx.fillStyle = COLOR.nose
-  ctx.beginPath()
-  ctx.moveTo(-4.5, 8)
-  ctx.lineTo(4.5, 8)
-  ctx.lineTo(0, 13)
-  ctx.closePath()
-  ctx.fill()
+  // 鼻子(兔子用粉嫩小鼻头,更软萌)
+  if (lion.species === 'rabbit') {
+    ctx.fillStyle = '#F2849E'
+    ctx.beginPath()
+    ctx.moveTo(-3.6, 8.5)
+    ctx.quadraticCurveTo(0, 7.4, 3.6, 8.5)
+    ctx.lineTo(0, 12.5)
+    ctx.closePath()
+    ctx.fill()
+  } else {
+    ctx.fillStyle = COLOR.nose
+    ctx.beginPath()
+    ctx.moveTo(-4.5, 8)
+    ctx.lineTo(4.5, 8)
+    ctx.lineTo(0, 13)
+    ctx.closePath()
+    ctx.fill()
+  }
 
   // 鼻梁下的小竖线
   ctx.strokeStyle = COLOR.mouth
@@ -2890,6 +2901,20 @@ function drawNoseMouth() {
     ctx.beginPath()
     ctx.ellipse(0, 23, 5, 3.5, 0, 0, Math.PI)
     ctx.fill()
+  } else if (lion.species === 'rabbit') {
+    // 兔子:可爱的三瓣嘴(ω),心情越好嘴角越翘
+    ctx.strokeStyle = COLOR.mouth
+    ctx.lineWidth = 2.4
+    ctx.lineCap = 'round'
+    const lift = clamp(c, -0.4, 1) * 2
+    ctx.beginPath()
+    ctx.moveTo(0, 17)
+    ctx.quadraticCurveTo(-3, 21, -6.5, 19 - lift)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(0, 17)
+    ctx.quadraticCurveTo(3, 21, 6.5, 19 - lift)
+    ctx.stroke()
   } else {
     // 一条弧:c 为正→微笑,为负→撇嘴(生气/不开心)
     ctx.strokeStyle = COLOR.mouth
@@ -2900,18 +2925,6 @@ function drawNoseMouth() {
     ctx.quadraticCurveTo(-4.5, 18 + c * 7, 0, 18)
     ctx.quadraticCurveTo(4.5, 18 + c * 7, 9, 18)
     ctx.stroke()
-  }
-
-  // 兔子的两颗小门牙(张嘴 / 打哈欠时不画)
-  if (lion.species === 'rabbit' && !open) {
-    ctx.fillStyle = '#FFFFFF'
-    ctx.strokeStyle = COLOR.line
-    ctx.lineWidth = 1
-    for (const tx of [-3.6, 0.2]) {
-      roundedRect(tx, 19, 3.4, 5, 1.2)
-      ctx.fill()
-      ctx.stroke()
-    }
   }
 }
 
