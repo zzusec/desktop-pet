@@ -2388,8 +2388,8 @@ function drawBody(breath) {
   roundedBlob(0, cy, w, h, 22)
   ctx.fill()
   ctx.stroke()
-  // 浅色肚皮
-  ctx.fillStyle = 'rgba(255,248,225,0.65)'
+  // 浅色肚皮(兔子用更白的肚皮,不偏黄)
+  ctx.fillStyle = lion.species === 'rabbit' ? 'rgba(255,255,255,0.65)' : 'rgba(255,248,225,0.65)'
   ctx.beginPath()
   ctx.ellipse(0, cy + 6, w * 0.28, h * 0.34, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -2504,6 +2504,24 @@ function drawTail(breath) {
   ctx.save()
   const baseX = -S.bodyW * 0.42
   const baseY = -S.legH - 10
+  if (lion.species === 'rabbit') {
+    // 兔子:背后下方一个圆圆的棉花尾巴
+    const tx = baseX + 2
+    const ty = baseY + 2
+    ctx.fillStyle = skin().maneOuter
+    ctx.strokeStyle = COLOR.line
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    ctx.arc(tx, ty, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'
+    ctx.beginPath()
+    ctx.arc(tx - 2.4, ty - 2.4, 3, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+    return
+  }
   const excited =
     lion.state === 'stalk' || lion.state === 'tailchase' || lion.state === 'playball' || lion.state === 'zoomies' || lion.state === 'pant' || lion.state === 'pounce' || lion.state === 'fetch' || lion.state === 'playchase' || lion.state === 'playtussle'
   ctx.strokeStyle = skin().limb
@@ -2806,6 +2824,40 @@ function drawEyes() {
       ctx.beginPath()
       ctx.arc(x, ey + 2, 8, Math.PI * 1.15, Math.PI * 1.85)
       ctx.stroke()
+      continue
+    }
+
+    if (lion.species === 'rabbit') {
+      // 兔子专属:又大又亮的圆眼珠 + 大小双高光 + 一笔睫毛(参考可爱兔)
+      const openY = Math.max(0.08, lion.eyeOpen)
+      let gx = lion.gazeX * 2.4 * lion.facing
+      let gy = lion.gazeY * 2.2
+      if (lion.state === 'think') { gx = 1.8; gy = -2.6 }
+      ctx.save()
+      ctx.translate(x, ey + 1)
+      ctx.scale(1, openY)
+      ctx.fillStyle = '#3A2A1B' // 深棕近黑的大眼珠(微竖椭圆)
+      ctx.beginPath()
+      ctx.ellipse(gx, gy, 7.8, 9.5, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'
+      ctx.beginPath() // 大高光(左上)
+      ctx.arc(gx - 2.4, gy - 3.6, 2.9, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath() // 小高光(右下)
+      ctx.arc(gx + 2.3, gy + 2.8, 1.3, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+      if (openY > 0.5) {
+        // 外眼角一笔睫毛
+        ctx.strokeStyle = COLOR.eye
+        ctx.lineWidth = 1.6
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(x + side * 6.5, ey - 7.5)
+        ctx.quadraticCurveTo(x + side * 10, ey - 9, x + side * 11.5, ey - 6.5)
+        ctx.stroke()
+      }
       continue
     }
 
