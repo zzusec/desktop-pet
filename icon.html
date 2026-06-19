@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style></head>
+<body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script>
+// 应用图标:圆角暖色背景 + 居中小狮子头(纯 Canvas 绘制)
+const ctx = document.getElementById('c').getContext('2d')
+const LINE = 'rgba(120,66,16,0.6)'
+const W = 1024
+
+// 圆角矩形背景(暖黄渐变)
+const bg = ctx.createLinearGradient(0, 0, 0, W)
+bg.addColorStop(0, '#FFF1CE')
+bg.addColorStop(1, '#FFD98A')
+ctx.fillStyle = bg
+const r = 184
+ctx.beginPath()
+ctx.moveTo(r, 0)
+ctx.arcTo(W, 0, W, W, r)
+ctx.arcTo(W, W, 0, W, r)
+ctx.arcTo(0, W, 0, 0, r)
+ctx.arcTo(0, 0, W, 0, r)
+ctx.closePath()
+ctx.fill()
+
+// 居中放大画小狮子头
+ctx.translate(512, 516)
+ctx.scale(6, 6)
+
+// 鬃毛(外层深橙 + 内层浅橙)
+const n = 14
+ctx.fillStyle = '#E8801F'
+ctx.strokeStyle = LINE
+ctx.lineWidth = 3
+ctx.beginPath()
+for (let i = 0; i < n; i++) {
+  const a = (i / n) * Math.PI * 2
+  const rr = 56 + (i % 2 === 0 ? 6 : -2)
+  const mx = Math.cos(a) * rr, my = Math.sin(a) * rr
+  ctx.moveTo(mx + 13, my)
+  ctx.arc(mx, my, 13, 0, Math.PI * 2)
+}
+ctx.fill()
+ctx.stroke()
+ctx.fillStyle = '#FBB04B'
+ctx.beginPath()
+for (let i = 0; i < n; i++) {
+  const a = (i / n) * Math.PI * 2 + 0.22
+  const rr = 48
+  const mx = Math.cos(a) * rr, my = Math.sin(a) * rr
+  ctx.moveTo(mx + 10, my)
+  ctx.arc(mx, my, 10, 0, Math.PI * 2)
+}
+ctx.fill()
+
+// 圆耳
+for (const side of [-1, 1]) {
+  const ex = side * 27, ey = -40
+  ctx.fillStyle = '#F0913B'; ctx.strokeStyle = LINE; ctx.lineWidth = 3
+  ctx.beginPath(); ctx.arc(ex, ey, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = '#C9621E'; ctx.beginPath(); ctx.arc(ex, ey + 1, 7, 0, Math.PI * 2); ctx.fill()
+}
+
+// 脸
+const fg = ctx.createRadialGradient(-8, -10, 6, 0, 0, 48)
+fg.addColorStop(0, '#FFE596'); fg.addColorStop(1, '#FFC53D')
+ctx.fillStyle = fg; ctx.strokeStyle = LINE; ctx.lineWidth = 3
+ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+
+// 腮红
+ctx.fillStyle = 'rgba(255,122,110,0.45)'
+for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 24, 12, 8, 5.5, 0, 0, Math.PI * 2); ctx.fill() }
+
+// 眼睛
+for (const s of [-1, 1]) {
+  const x = s * 13.5, ey = -6
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(120,66,16,0.25)'; ctx.lineWidth = 1.5
+  ctx.beginPath(); ctx.arc(x, ey, 9.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = '#3A2A1B'; ctx.beginPath(); ctx.arc(x, ey, 5.4, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 1.8, ey - 2, 1.8, 0, Math.PI * 2); ctx.fill()
+}
+
+// 鼻 + 嘴
+ctx.fillStyle = '#6B3A1E'
+ctx.beginPath(); ctx.moveTo(-4.5, 8); ctx.lineTo(4.5, 8); ctx.lineTo(0, 13); ctx.closePath(); ctx.fill()
+ctx.strokeStyle = '#6B3A1E'; ctx.lineWidth = 2.8; ctx.lineCap = 'round'
+ctx.beginPath(); ctx.moveTo(0, 13); ctx.lineTo(0, 17); ctx.stroke()
+ctx.beginPath(); ctx.moveTo(-9, 18); ctx.quadraticCurveTo(-4.5, 24, 0, 18); ctx.quadraticCurveTo(4.5, 24, 9, 18); ctx.stroke()
+</script>
+</body>
+</html>

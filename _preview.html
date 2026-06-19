@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>小狮子预览</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      /* 仅预览用:给透明 canvas 衬一个背景,方便看清渲染效果 */
+      background: linear-gradient(#bfe0f5, #eaf4fb);
+    }
+    #stage { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <script src="renderer.js"></script>
+  <script>
+    // 预览专用:#dance/#roll/... 触发动作;#cat/#dog/#lion/#rabbit/#panda 直接切换种类(用于截图验证)
+    const __a = location.hash.slice(1)
+    if (['lion', 'cat', 'dog', 'rabbit', 'panda'].includes(__a)) {
+      const set = () => { if (window.__pet) window.__pet.lion.species = __a; else setTimeout(set, 50) }
+      set()
+    } else if (__a && window.__pet && window.__pet[__a]) {
+      setTimeout(() => window.__pet[__a](), 250)
+    }
+  </script>
+</body>
+</html>

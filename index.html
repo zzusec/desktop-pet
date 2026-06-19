@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>桌面小狮子</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      /* 默认不显示光标(整窗穿透时本就看不到),互动时由脚本动态设置 */
+      cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #stage {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <script src="renderer.js"></script>
+</body>
+</html>
