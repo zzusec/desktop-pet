@@ -31,7 +31,14 @@ function resize() {
   canvas.style.height = H + 'px'
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
   groundY = H - 12
-  if (lion) {
+  if (typeof pets !== 'undefined' && pets.length) {
+    for (const p of pets) {
+      p.x = clamp(p.x, 80, W - 80)
+      if (p.baseY) p.baseY = clamp(p.baseY, 120, groundY)
+      else p.baseY = groundY
+      if (p.state !== 'drag') p.y = Math.min(p.y, p.baseY)
+    }
+  } else if (lion) {
     lion.x = clamp(lion.x, 80, W - 80)
     if (lion.state !== 'drag') lion.y = Math.min(lion.y, groundY)
   }
@@ -122,6 +129,7 @@ let lion = {
 
   vy: 0, // 垂直速度(下落 / 跳跃)
   onGround: true,
+  baseY: 0, // 落脚线:拖到哪松手就停在哪;走动/待机/跳跃都以此为「地面」
 
   facing: 1, // 朝向:1 右,-1 左
   targetX: null, // 走动目标
@@ -214,6 +222,7 @@ function makePet(species, x) {
   p.species = species || 'lion'
   p.x = x != null ? x : rand(120, (W || 800) - 120)
   p.y = groundY || (typeof H === 'number' ? H - 12 : 600)
+  p.baseY = p.y // 新宠物默认落脚在地面
   p.size = lion.size || 1
   p.sound = pets[0] ? pets[0].sound : false
   p.accessory = 'none'
@@ -672,7 +681,7 @@ function saveState() {
     localStorage.setItem(
       SAVE_KEY,
       JSON.stringify({
-        pets: pets.map((p) => ({ x: p.x, mood: p.mood, hunger: p.hunger, bond: p.bond, accessory: p.accessory, species: p.species })),
+        pets: pets.map((p) => ({ x: p.x, mood: p.mood, hunger: p.hunger, bond: p.bond, baseY: p.baseY, accessory: p.accessory, species: p.species })),
         sound: pets[0] ? pets[0].sound : false,
         fx: fxType,
         stats: showStats,
@@ -703,6 +712,7 @@ function loadState() {
       if (typeof sp.hunger === 'number') p.hunger = clamp(sp.hunger - offlineMin * 1.5, 0, 100)
       p.bond = typeof sp.bond === 'number' ? clamp(sp.bond, 0, 100) : 0
       p.bondLevel = bondLevelOf(p.bond)
+      if (typeof sp.baseY === 'number') { p.baseY = clamp(sp.baseY, 120, groundY); p.y = p.baseY } // 恢复上次的落脚位置
       p.accessory = sp.accessory || (sp.hat ? 'santa' : 'none') // 兼容旧版 hat 存档
       p.sound = !!s.sound
       pets.push(p)
@@ -1316,9 +1326,15 @@ window.addEventListener('mouseup', (e) => {
   if (quickTap) {
     doPet() // 点一下 → 摸头
   } else {
-    say(pick(['哎哟~', '稳稳落地', '嘿!']), 1.4)
+    // 拖到哪松手就停在哪:把落脚线设到松手处,不再掉回屏幕底
+    lion.baseY = clamp(lion.y, 120, groundY)
+    lion.y = lion.baseY
+    lion.vy = 0
+    lion.onGround = true
+    say(pick(['就待这儿~', '这里不错!', '稳稳的~']), 1.4)
     setState('idle')
     lion.idleTimer = rand(1.5, 3)
+    saveState() // 记住新位置,重启后还在这
   }
   dragPet = null
   overPet = hitPetAt(e.clientX, e.clientY) != null
@@ -1421,13 +1437,14 @@ function updatePet(dt, isFirst) {
   }
   addBond(lion, dt * 0.05) // 陪伴本身也会一点点加深亲密
 
-  // ---- 垂直物理(重力 / 跳跃 / 落地)----
+  // ---- 垂直物理(重力 / 跳跃 / 落地;落到各自的落脚线 baseY)----
   if (lion.state !== 'drag') {
-    if (!lion.onGround || lion.vy !== 0 || lion.y < groundY) {
+    const floor = lion.baseY || groundY
+    if (!lion.onGround || lion.vy !== 0 || lion.y < floor) {
       lion.vy += 1500 * dt
       lion.y += lion.vy * dt
-      if (lion.y >= groundY) {
-        lion.y = groundY
+      if (lion.y >= floor) {
+        lion.y = floor
         if (!lion.onGround && lion.vy > 120) {
           // 落地挤压
           lion.sx = 1.28
@@ -2296,13 +2313,14 @@ function drawPet() {
     bob += -Math.abs(Math.sin(lion.foodT * 10)) * 2 // 咀嚼时头身随节奏轻点
   }
 
-  // ---- 地面影子(跟随脚底,随高度变小)----
-  const airborne = clamp((groundY - lion.y) / 200, 0, 1)
+  // ---- 影子(跟随脚底落脚线,跳起时随高度变小)----
+  const floorY = lion.baseY || groundY
+  const airborne = clamp((floorY - lion.y) / 200, 0, 1)
   ctx.save()
   ctx.globalAlpha = 0.9 - airborne * 0.5
   ctx.fillStyle = COLOR.shadow
   ctx.beginPath()
-  ctx.ellipse(lion.x, groundY + 4, (46 - airborne * 16) * s, (10 - airborne * 4) * s, 0, 0, Math.PI * 2)
+  ctx.ellipse(lion.x, floorY + 4, (46 - airborne * 16) * s, (10 - airborne * 4) * s, 0, 0, Math.PI * 2)
   ctx.fill()
   ctx.restore()
 
@@ -3203,7 +3221,7 @@ function drawStompDust() {
   ctx.strokeStyle = 'rgba(150,110,60,0.55)'
   ctx.lineWidth = 2.5
   ctx.lineCap = 'round'
-  const baseY = groundY + 1
+  const baseY = (lion.baseY || groundY) + 1
   for (const dir of [-1, 1]) {
     const bx = lion.x + dir * 28 * lion.size
     ctx.beginPath()
@@ -3395,7 +3413,7 @@ function drawSpeedLines() {
 function drawSniffPuffs() {
   const dir = lion.facing
   const bx = lion.x + dir * 34 * lion.size
-  const by = groundY - 4
+  const by = (lion.baseY || groundY) - 4
   ctx.save()
   ctx.fillStyle = 'rgba(170,150,120,0.5)'
   for (let i = 0; i < 3; i++) {
@@ -3632,6 +3650,7 @@ window.addEventListener('resize', resize)
 resize()
 lion.x = W * 0.5
 lion.y = groundY
+lion.baseY = groundY
 lion.size = Math.max(0.85, Math.min(1.25, W / 1440)) // 大屏稍大
 lastTimeSlot = timeSlot(new Date().getHours()) // 记录启动时段,之后跨时段才问候
 if (new Date().getMonth() === 11) lion.accessory = 'santa' // 12 月自动戴上圣诞帽
